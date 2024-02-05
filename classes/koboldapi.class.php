@@ -13,6 +13,7 @@ enum PromptFormat
     case VicunaShort;
     case LlamaChat;
     case MPT;
+    case Mistral;
     case None;
 }
 /*
@@ -142,7 +143,8 @@ class KoboldApi {
                 $this->promptPostfix = "\nASSISTANT:\n";
                 $this->payload['stop_sequence'] = array("USER:", "ASSISTANT:");
             break;
-
+            
+            case PromptFormat::Mistral:
             case PromptFormat::LlamaChat:
                 $this->promptPrefix = "\n[INST] \n";
                 $this->promptPostfix = "\n[/INST]\n";
@@ -239,6 +241,17 @@ class KoboldApi {
 
         //there's nothing other than wrapper on the result, lets remove it and just return the result
         return $this->GetResult($response);
+    }
+
+    public function GetModel(){
+        $endpoint = $this->host . '/api/v1/model';
+        $json_string = file_get_contents(  $endpoint );
+        $json = $this->ParseToArray($json_string);
+        if( isset($json['result']) ){
+            return $json['result'];
+        }
+        return $json_string;
+
     }
 
     

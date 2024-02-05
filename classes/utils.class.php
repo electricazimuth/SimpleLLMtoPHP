@@ -44,7 +44,47 @@ class Utils {
         return false;
     }
 
+    //search a string for swaerwords, count thema nd score them return the total
+    public static function GetSwearCount($string){
 
+        $results = array('score' => 0, 'matches' => array() );
+        
+        foreach( array(
+            'cunt' => 5,
+            'nigger' => 3,
+            'nigga' => 3,
+            'fucker' => 2,
+//            'fuckin' => 2,
+            'fuck' => 2,
+            'shit' => 1,
+            'piss' => 1, 
+            'pussy' => 1,
+            'dick' => 1, 
+            'cock' => 1, 
+            'shit' => 1, 
+            'twat' => 1, 
+            'bollock' => 1,
+            'hoe' => 1,
+            'slut' => 1, 
+            'ass' => 1,
+            'wank' => 1
+
+        ) as $word => $score ){
+
+            $regex = '/\b' . $word . '/i';
+            $num_matches = preg_match_all( $regex, $string);
+            $results['score'] += $num_matches * $score;
+            if( $num_matches > 0){
+                $results['matches'][$word] = $num_matches;
+                //array_push($results['matches'], array($word =>$num_matches));
+            }
+        }
+
+        return $results;
+
+
+
+    }
 
 
     public static function GetRealIpAddr() {
@@ -220,12 +260,12 @@ class Utils {
     }
 
     public static function DbLog($title, $info, $db ) {
-        $ip = self::GetRealIpAddr();
+        //$ip = self::GetRealIpAddr();
         if( strlen($info) > 255){ //just incase of malicious bot posting
             $info = substr($info,0,252) . "...";
         }
-        $q = "INSERT INTO `x_debug_log` (`title`, `info`, `ip` , `agent` ) VALUES (?, ?, ?, ?)";
-        $result = $db->sendQueryP( $q, array($title, $info, $ip, $_SERVER['HTTP_USER_AGENT']), "ssss" );
+        $q = "INSERT INTO `x_debug_log` (`title`, `info`) VALUES (?, ?)";
+        $result = $db->sendQueryP( $q, array($title, $info), "ss" );
 
     }
 
