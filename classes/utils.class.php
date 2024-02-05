@@ -88,6 +88,7 @@ class Utils {
 
 
     public static function GetRealIpAddr() {
+        $ip = '';
         if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
             //check ip from share internet
             $ip = $_SERVER['HTTP_CLIENT_IP'];
@@ -100,7 +101,7 @@ class Utils {
             //to check ip is pass from proxy
             $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
             
-        } else {
+        } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
             $ip = $_SERVER['REMOTE_ADDR'];
         }
         return $ip;
