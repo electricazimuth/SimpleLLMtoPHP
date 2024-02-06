@@ -7,7 +7,7 @@ require("bootstrapper.inc.php");
 //include('templates/header.inc.php');
 
 
-$stage = 3;
+$stage = 2;
 
 $is_test_run = true;
 $last_stage = $stage - 1;
@@ -73,7 +73,9 @@ while($rows_to_do > 200 && !$auto_stop){
     $loginfo['model'] = $registry->llm->GetModel();
     $loginfo['totaltime'] = microtime(true) - $time_start;
     $loginfo['numrows'] = count($rows);
-    $loginfo['avetime'] = number_format((float)($loginfo['totaltime'] / count($rows)), 2, '.', '');
+    if( count($rows) > 0){
+        $loginfo['avetime'] = number_format((float)($loginfo['totaltime'] / count($rows)), 2, '.', '');
+    }
     $loginfo['todo'] = $rows_to_do;
     $loginfo['lastkey'] = $row['pri_key'];
 
