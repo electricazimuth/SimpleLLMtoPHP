@@ -103,4 +103,4 @@ while($rows_to_do > 10){
 }
 
 //include('templates/footer.inc.php');
-echo 'done';
+echo ' done ' . PHP_EOL ;
