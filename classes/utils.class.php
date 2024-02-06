@@ -276,5 +276,29 @@ class Utils {
         echo json_encode($response);
         die();
     }
+
+    /* expects something like
+     * 
+     * 
+    swearing:   0
+    offensive: 1
+    provocative:1
+     *
+     */
+    public static function ProcessRatings($llm_output){
+
+        $result = array();
+        foreach( array('swearing','offensive','provocative') as $key ){
+       
+            $s_pattern = '/' . $key . ':?\s*([0-9]+)/';
+            $s_result = preg_match($s_pattern, $llm_output, $s_matches);
+            if( $s_result == 1 && count($s_matches) > 1){
+                $result[$key] = intval($s_matches[1]);
+            }else{
+                $result[$key] = -1;
+            }
+        }
+        return json_encode($result,true);
+    } 
 }
     

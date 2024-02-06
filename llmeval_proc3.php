@@ -11,7 +11,8 @@ $stage = 3;
 
 $is_test_run = true;
 $last_stage = $stage - 1;
-$logname = 'llmeval.' . $stage;
+$next_stage = $stage + 1;
+$logname = $stage . 'format';
 
 
 
@@ -25,19 +26,37 @@ $auto_stop = false;
 while($rows_to_do > 200 && !$auto_stop){
 
     $time_start = microtime(true);
-
-    $q = "SELECT l.lyrics, l.id, l.artist, l.title, p.pri_key FROM lyrics_hot100 l, processing p WHERE p.stage = 1 AND p.lyric_id = l.id ORDER BY p.pri_key ASC LIMIT 200";
+//lyric_id 	hotu_id 	stage 	status 	swearcount 	llm_eval 	swearing 	offensive 	provocative
+    $q = "SELECT * FROM processing p WHERE p.stage = " . $stage . " ORDER BY p.pri_key ASC LIMIT 400";
     $rows = $registry->db->getRows($q);
-
 
     if( is_array($rows) && count($rows) > 0 ){
         foreach($rows as $row){
 
-            if( !$is_test_run ){
-                $q_reply = ( strlen($reply) > 254 ) ? substr($reply , 0,254) : $reply;
-                $q = "UPDATE processing SET llm_eval = ?, stage = 2 WHERE pri_key = ?";
-                $registry->db->sendQueryP($q, array($q_reply, $row['pri_key']), "si");
+            $data = Utils::ProcessRatings($row['llm_eval']);
+            $okay = true;
+            foreach($data as $key => $val){
+                if( $val < 0){
+                    //error
+                    $okay = false;
+                }
             }
+
+            if( !$is_test_run ){
+                if( $okay ){
+
+                    $q = "UPDATE processing SET stage = ?,swearing = ?, offensive = ?, provocative = ?  WHERE pri_key = ?";
+                    $registry->db->sendQueryP($q, array($next_stage, $data['swearing'], $data['offensive'], $data['provocative']), "iiiii");
+
+                }else{
+
+                    $q = "UPDATE processing SET stage = ? WHERE pri_key = ?";
+                    $registry->db->sendQueryP($q, array($last_stage, $row['pri_key']), "ii");
+
+
+                }
+            }
+
         }
     }
 
@@ -66,7 +85,7 @@ while($rows_to_do > 200 && !$auto_stop){
 
 if($is_test_run){
     echo '<pre>';
-    var_dump($loginfo);
+    json_encode($loginfo,JSON_FORCE_OBJECT | JSON_PRETTY_PRINT);
     echo '</pre>';
 }
 //include('templates/footer.inc.php');
