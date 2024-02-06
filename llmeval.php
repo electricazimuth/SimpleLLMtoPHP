@@ -1,7 +1,7 @@
 <?php
 set_time_limit(0);
 
-$time_start = microtime(true);
+
 require("bootstrapper.inc.php");
 
 //include('templates/header.inc.php');
@@ -17,7 +17,9 @@ $test_q = "SELECT COUNT(*) as counter FROM processing WHERE stage = 1";
 $test_rows = $registry->db->getRows($test_q);
 $rows_to_do = (int)$test_rows[0]['counter'];
 
-while($rows_to_do > 200){
+while($rows_to_do > 10){
+
+    $time_start = microtime(true);
 
     $q = "SELECT l.lyrics, l.id, l.artist, l.title, p.pri_key FROM lyrics_hot100 l, processing p WHERE p.stage = 1 AND p.lyric_id = l.id ORDER BY p.pri_key ASC LIMIT 200";
     $rows = $registry->db->getRows($q);
@@ -80,6 +82,7 @@ while($rows_to_do > 200){
     $loginfo['numrows'] = count($rows);
     $loginfo['avetime'] = number_format((float)($loginfo['totaltime'] / count($rows)), 2, '.', '');
     $loginfo['todo'] = $rows_to_do;
+    $loginfo['lastkey'] = $row['pri_key'];
 
     Utils::DbLog($logname, json_encode($loginfo,JSON_FORCE_OBJECT | JSON_PRETTY_PRINT), $registry->db );
 
