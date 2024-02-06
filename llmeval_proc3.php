@@ -13,12 +13,12 @@ $is_test_run = true;
 $last_stage = $stage - 1;
 $next_stage = $stage + 1;
 $logname = $stage . 'format';
-
+$loginfo = array();
 
 
 //1202  2332 1182
 // l.row_id ASC LIMIT 1,1";
-$test_q = "SELECT COUNT(*) as counter FROM processing WHERE stage = " . $last_stage;
+$test_q = "SELECT COUNT(*) as counter FROM processing WHERE stage = " . $stage;
 $test_rows = $registry->db->getRows($test_q);
 $rows_to_do = (int)$test_rows[0]['counter'];
 $auto_stop = false;
