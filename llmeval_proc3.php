@@ -19,7 +19,7 @@ $test_rows = $registry->db->getRows($test_q);
 $rows_to_do = (int)$test_rows[0]['counter'];
 $auto_stop = false;
 
-while($rows_to_do > 200 && !$auto_stop){
+while($rows_to_do > 5 && !$auto_stop){
 
     $time_start = microtime(true);
 //lyric_id 	hotu_id 	stage 	status 	swearcount 	llm_eval 	swearing 	offensive 	provocative

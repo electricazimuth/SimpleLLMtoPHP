@@ -63,6 +63,7 @@ class Utils {
             'cock' => 1, 
             'shit' => 1, 
             'twat' => 1, 
+            'bitch' => 1,
             'bollock' => 1,
             'hoe' => 1,
             'slut' => 1, 

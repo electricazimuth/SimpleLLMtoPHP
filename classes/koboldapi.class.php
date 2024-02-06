@@ -106,6 +106,12 @@ class KoboldApi {
         }
     }
 
+    public function SetMaxContextLength($length){
+        if( is_numeric($length)){
+            $this->payload['max_context_length'] = intval($length);
+        }
+    }
+
     public function SetGrammar($grammar_string){
         $this->payload['grammar'] = $grammar_string;
     }

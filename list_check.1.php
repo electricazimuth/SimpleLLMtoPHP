@@ -21,14 +21,7 @@ $q = "SELECT l.lyrics, l.id, l.artist, l.title, p.* FROM lyrics_hot100 l, proces
 $q = "SELECT l.lyrics, l.id, l.artist, l.title, p.* FROM lyrics_hot100 l, processing p WHERE p.exclude = 0 AND p.lyric_id = l.id ORDER BY p.provocative DESC, p.offensive DESC , p.swearing DESC  LIMIT 50";
 //$q = "SELECT l.lyrics, l.id, l.artist, l.title, p.* FROM lyrics_hot100 l, processing p WHERE p.exclude = 0 AND p.lyric_id = l.id AND p.swearcount > 2 AND p.swearing > 2  ORDER BY p.swearing ASC LIMIT 10"; 
 
-$q = "SELECT l.lyrics, l.id, l.artist, l.title, p.*  FROM lyrics_hot100 l, processing p WHERE p.exclude = 0 AND p.lyric_id = l.id AND l.lyrics NOT LIKE '%[Chorus]%' AND l.lyrics NOT LIKE '%[Chorus]%' AND l.lyrics NOT REGEXP '\n\n' LIMIT 100"; // 10,000
-//COUNT(*) as countr
-
-?>
-<div class="container">
-<?php
 $rows = $registry->db->getRows($q);
-
 ?>
 <div class="container">
 <table class=" table table-striped">
@@ -58,8 +51,6 @@ if( is_array($rows) && count($rows) > 0 ){
 }
 ?>
 </table>
-
-
 </div>
 <?php
 include('templates/footer.inc.php');
