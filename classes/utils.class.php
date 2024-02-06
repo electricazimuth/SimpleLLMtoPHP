@@ -290,7 +290,7 @@ class Utils {
         $result = array();
         foreach( array('swearing','offensive','provocative') as $key ){
        
-            $s_pattern = '/' . $key . ':?\s*([0-9]+)/';
+            $s_pattern = '/' . $key . ':?\s*([0-9]+)/i'; // the word with possible colon with possible white space then number - case insensitive
             $s_result = preg_match($s_pattern, $llm_output, $s_matches);
             if( $s_result == 1 && count($s_matches) > 1){
                 $result[$key] = intval($s_matches[1]);
@@ -298,7 +298,7 @@ class Utils {
                 $result[$key] = -1;
             }
         }
-        return json_encode($result,true);
+        return $result;
     } 
 }
     

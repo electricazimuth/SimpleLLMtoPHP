@@ -1,18 +1,14 @@
 <?php
 set_time_limit(0);
-
-
 require("bootstrapper.inc.php");
 
 //include('templates/header.inc.php');
-
-
 $stage = 2;
 
-$is_test_run = true;
+$is_test_run = false;
 $last_stage = $stage - 1;
 $next_stage = $stage + 1;
-$logname = $stage . 'format';
+$logname = $stage . '.format';
 $loginfo = array();
 
 
@@ -27,7 +23,7 @@ while($rows_to_do > 200 && !$auto_stop){
 
     $time_start = microtime(true);
 //lyric_id 	hotu_id 	stage 	status 	swearcount 	llm_eval 	swearing 	offensive 	provocative
-    $q = "SELECT * FROM processing p WHERE p.stage = " . $stage . " ORDER BY p.pri_key ASC LIMIT 400";
+    $q = "SELECT * FROM processing p WHERE p.stage = " . $stage . " ORDER BY p.pri_key ASC LIMIT 250";
     $rows = $registry->db->getRows($q);
 
     if( is_array($rows) && count($rows) > 0 ){
@@ -46,7 +42,7 @@ while($rows_to_do > 200 && !$auto_stop){
                 if( $okay ){
 
                     $q = "UPDATE processing SET stage = ?,swearing = ?, offensive = ?, provocative = ?  WHERE pri_key = ?";
-                    $registry->db->sendQueryP($q, array($next_stage, $data['swearing'], $data['offensive'], $data['provocative']), "iiiii");
+                    $registry->db->sendQueryP($q, array($next_stage, $data['swearing'], $data['offensive'], $data['provocative'], $row['pri_key']), "iiiii");
 
                 }else{
 
