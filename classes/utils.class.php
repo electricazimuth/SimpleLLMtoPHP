@@ -301,5 +301,51 @@ class Utils {
         }
         return $result;
     } 
+
+    public static function SliceLyricSections($lyrics){
+
+        $regex = '/\n?\[([^]]+)\]\n/i'; // match things in square brackets with line breaks
+        $found = preg_match_all($regex, $lyrics, $matches, PREG_OFFSET_CAPTURE);
+        //var_dump($matches);
+        $chunkpositions = array();
+        $chunks = array();
+
+        //var_dump($matches);
+        //echo '<hr />';
+        $lastpos = 0;
+        if($found > 0 && is_array($matches[0])){
+            foreach($matches[0] as $k => $matchd){
+
+                //var_dump($matchd);
+                //echo '<hr />';
+                if( is_array($matchd)){
+                    //get next element position
+                    if( $k < count($matches[0]) && isset($matches[0][$k+1]) ){
+                        $nextpos = $matches[0][$k+1][1];
+                    }else{
+                        $nextpos = strlen($lyrics);
+                    }
+
+                    //$chunkpositions[] = $matchd[0] . ' at position ' . $matchd[1] . ' next pos ' . $nextpos;
+                    $start_pos = $matchd[1] + strlen($matchd[0]);
+                    $length = $nextpos - $start_pos;
+                    $slice = trim( substr($lyrics, $start_pos, $length) );
+                    if( !empty($slice)){
+                        $chunks[] = $slice;
+                    }
+                    //var_dump($matchd[0] . ' ' .$matchd[1] );
+                    //    echo '<hr />';
+
+                    
+
+                }
+            }
+        }
+
+        //$chunks[] = substr($lyrics, $matchd[1] )        
+        
+        return $chunks;
+    } 
+    
 }
     
