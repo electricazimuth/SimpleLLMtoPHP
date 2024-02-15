@@ -1,4 +1,7 @@
 <?php
+/*
+ * A way to view data - no processing in this page
+ */ 
 $time_start = microtime(true);
 require("bootstrapper.inc.php");
 

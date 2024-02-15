@@ -304,6 +304,7 @@ class Utils {
 
     public static function SliceLyricSections($lyrics){
 
+        //break them by the square bracket seperators
         $regex = '/\n?\[([^]]+)\]\n/i'; // match things in square brackets with line breaks
         $found = preg_match_all($regex, $lyrics, $matches, PREG_OFFSET_CAPTURE);
         //var_dump($matches);
@@ -342,10 +343,81 @@ class Utils {
             }
         }
 
+        //break them by double line breaks
+        $outchunksbreak = array();
+        $doublelinebreaks = "\n\n";
+        if( count($chunks) ){
+            foreach( $chunks as $chunk ){
+                if( strpos($chunk, $doublelinebreaks)){
+                    $splitbylines = explode($doublelinebreaks, $chunk);
+                    foreach($splitbylines as $lines){
+                        $outchunksbreak[] = $lines;
+                    }
+                }else{
+                    $outchunksbreak[] = $chunk;
+                }
+            }
+        }
+
+        //limit to 10 lines per section
+        $outchunks = array();
+        foreach($outchunksbreak as $chunk){
+            $lines = explode( "\n", $chunk);
+            if( count($lines) > 10 ){
+                for ($i = 0; $i < count($lines); $i += 8) {
+                    // Extract 4 elements starting from the current position
+                    $slice = array_slice($lines, $i, 8);
+                    // Join the elements into a single string using a comma as the separator
+                    $outchunks[] = implode("\n", $slice);
+
+                }
+
+            }else{
+                $outchunks[] = $chunk;
+            }
+        }
+
         //$chunks[] = substr($lyrics, $matchd[1] )        
         
-        return $chunks;
+        return $outchunks;
     } 
+
+    // for terminal output
+    public static function CliProgressBar($done, $total, $width=50) {
+        if( self::IsCli() ){
+            $perc = round(($done * 100) / $total);
+            $bar = round(($width * $perc) / 100);
+            //$disp = number_format($perc*100, 0);
+            $info = "  $done/$total";
+            echo sprintf("%s%%[%s>%s]%s\r", $perc, str_repeat("=", $bar), str_repeat(" ", $width-$bar), $info);
+            flush();
+        }
+    }
+
+    public static function IsCli() {
+        if ( defined('STDIN') ) {
+            return true;
+        }
+
+        if ( php_sapi_name() === 'cli' ) {
+            return true;
+        }
+
+        if ( array_key_exists('SHELL', $_ENV) ) {
+            return true;
+        }
+
+        if ( empty($_SERVER['REMOTE_ADDR']) and !isset($_SERVER['HTTP_USER_AGENT']) and count($_SERVER['argv']) > 0) {
+            return true;
+        } 
+
+        if ( !array_key_exists('REQUEST_METHOD', $_SERVER) ) {
+            return true;
+        }
+
+        return false;
+    }
+
     
 }
     

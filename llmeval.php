@@ -1,4 +1,8 @@
 <?php
+/*
+ * sends lyrics to LLM - to look for bad language or provative themes
+ */
+
 set_time_limit(0);
 
 
