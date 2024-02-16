@@ -15,13 +15,16 @@ $next_stage = $stage + 1;
 //include('templates/header.inc.php');
 $logname = $stage . '.llmtopic';
 
-$is_test_run = false;
+$is_test_run = true;
 $continue_running = true;
 $memory_prompt = 'You are SongAnalyzer who is the best at analyzing song lyrics and scoring the lyrics into supplied topics. 
 Your task is to score the song lyrics by the supplied topics. 
 I will provide some song lyrics, read through them and understand the full context of the song and score them by each provided topic.
-Create a score for each topic based on how relevant the song lyrics are to that topic. You will only respond with the topic followed by a score on each line. Each topic will be scored out of 10. A score of 0 is for the topic not matching and a score of 10 for something that is a very strong match. 
-
+Create a score for each topic based on how relevant the song lyrics are to that topic. 
+You will respond with the topic followed by a colon and the numerical integer score on each line. 
+Each topic will be scored out of 10. A score of 0 is for the topic not matching and a score of 10 is for something that is a very strong match. 
+Do not reply with topics that don\'t match or score 0, only respond with topics that score more than 0.
+We\'re looking for 3 or more topics.
 Do not create your own topics, only use the topics from the following list:
 
 Love
@@ -62,7 +65,6 @@ Pets
 Nonsense
 
 [Lyrics Start]
-
 ';
 
 $postfix = '
@@ -81,7 +83,7 @@ $total = $rows_to_do;
 $num_done = 0;
 
 //$registry->llm->SetMemory($memory_prompt);
-$registry->llm->SetPromptFormat(PromptFormat::Mistral);//Alpaca);//VicunaShort ); Mistral //mixtral,llongorca - ChatML, Laser - Ollama , Alpaca -pivot moe LlamaChat Vicuna   MistralStopper MPT
+$registry->llm->SetPromptFormat(PromptFormat::ChatML);//Alpaca);//VicunaShort ); Mistral //mixtral,llongorca - ChatML, Laser - Ollama , Alpaca -pivot moe LlamaChat Vicuna   MistralStopper MPT
 $registry->llm->SetMaxContextLength(1024);
 $registry->llm->SetMaxLength(300);
 
@@ -111,7 +113,10 @@ while($rows_to_do > 10 && $continue_running){
                 $q = "UPDATE sections_topics SET topics = ?, processed = ? WHERE row_id = ?";
                 $registry->db->sendQueryP($q, array($reply, $next_stage, $row['row_id']), "sii");
             }else{
+                echo '<pre>';
                 var_dump( $reply );
+                echo '</pre>';
+                echo '<hr />';
             }
 
             $num_done++;
