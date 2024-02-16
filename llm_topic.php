@@ -1,6 +1,7 @@
 <?php
 /*
  * sends lyrics to LLM - to format them into sections
+ * try using koboldcpp/neuralhermes-2.5-mistral-7b.Q8_0
  * RESET
  * UPDATE sections_topics SET topics = '', processed = 0 WHERE processed != 0
  */
@@ -15,7 +16,7 @@ $next_stage = $stage + 1;
 //include('templates/header.inc.php');
 $logname = $stage . '.llmtopic';
 
-$is_test_run = true;
+$is_test_run = false;
 $continue_running = true;
 $memory_prompt = 'You are SongAnalyzer who is the best at analyzing song lyrics and scoring the lyrics into supplied topics. 
 Your task is to score the song lyrics by the supplied topics. 
