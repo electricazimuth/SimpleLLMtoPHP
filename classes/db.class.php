@@ -43,7 +43,7 @@ class Db {
 		    
 		    catch(Exception $e){
 		        $attempts++;
-		        usleep(500000); // 0.5sec
+		        usleep(800000); // 0.8sec
 		        continue; //skip the rest of the current loop - back to start of do loop (_loopError stays true)
 		    }
 		
@@ -56,7 +56,7 @@ class Db {
 		if($this->_loopError){
 		//tried num attempt to connect couldnt do it server up error page
 			error_log('Could not connect to MySQL ' . $dbase . ' ' .$user);
-		    echo 'Sorry website busy, please come back later';
+		    echo 'Sorry website busy, please come back later' . 'Could not connect to MySQL ' . $dbase . ' ' .$user;
 		    die();
 		}
 	
@@ -222,49 +222,74 @@ b 	corresponding variable is a blob and will be sent in packets
 
 		$types = ($types == "") ? str_repeat("s", count($params)) : $types;
 
-		if( $stmt = $this->_connection->prepare($query) ){
-
-        	$stmt->bind_param($types , ...$params);//$identifier, $md5);
-        	$stmt->execute();
-
-			$er = $this->_connection->errno; 
-			//0 = no error
-			//var_dump("err" . $er);
+		$numAttempts = 10;
+		$attempts = 0;
+		$this->_loopError = true;
 		
-			if(!$er){
-				if( substr($query, 0,6) == 'INSERT'){
-					$return = $this->_connection->insert_id; 
-				}else{
-					$return = $this->_connection->affected_rows;
-				}
-		
-			}else{
+		do {
+			try{
+				if( $stmt = $this->_connection->prepare($query) ){
 
-				switch($er) {
-					case 1062 :
-						$return = 'duplicate';
-						break;
-					case 1065 :
-						$return = 'empty';
-						break;
-					default :
-						$return = 'send qerror';
-						if(defined('DEBUG') && DEBUG == '1') {
-							
-							echo $query . '<br>';
-							die(' er:' .  $this->_connection->error  );
+					$stmt->bind_param($types , ...$params);//$identifier, $md5);
+					$stmt->execute();
+
+					$er = $this->_connection->errno; 
+					//0 = no error
+					//var_dump("err" . $er);
+				
+					if(!$er){
+						if( substr($query, 0,6) == 'INSERT'){
+							$return = $this->_connection->insert_id; 
+						}else{
+							$return = $this->_connection->affected_rows;
 						}
-						break;
+				
+					}else{
+
+						switch($er) {
+							case 1062 :
+								$return = 'duplicate';
+								break;
+							case 1065 :
+								$return = 'empty';
+								break;
+							default :
+								$return = 'send qerror';
+								if(defined('DEBUG') && DEBUG == '1') {
+									
+									echo $query . '<br>';
+									die(' er:' .  $this->_connection->error  );
+								}
+								break;
+						}
+					}
+
+					return $return;
+
+
+				}else{
+					$msg = $this->_connection->errno . ':' . $this->_connection->error . " Check your send query " . $query;
+					
+					Utils::DoingItWrong($msg);
 				}
 			}
+			catch(Exception $e){
+				$attempts++;
+				usleep(1500000); // 1.5sec
+				continue; //skip the rest of the current loop - back to start of do loop (_loopError stays true)
+			}
 
-			return $return;
+			$this->_loopError = false; 
+		    break;
 
-
-		}else{
-			$msg = $this->_connection->errno . ':' . $this->_connection->error . " Check your send query " . $query;
-			
-			Utils::DoingItWrong($msg);
+		} while($attempts < $numAttempts);		
+		
+		
+		if($this->_loopError){
+		//tried num attempt to connect couldnt do it server up error page
+			error_log('MySQL error ' . $this->_connection->errno . ' ' . $this->_connection->error);
+		    echo 'MysqlError ' . $this->_connection->error;
+		    die();
 		}
 	}
 

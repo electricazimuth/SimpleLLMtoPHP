@@ -302,6 +302,36 @@ class Utils {
         return $result;
     } 
 
+    /*
+    * Extract data - removing any zero scored items
+    * Love: 6
+    * Friendship: 7
+    * Heartbreak: 2
+    */
+    public static function ProcessTags($scored_tags){
+
+        $result = array('matched' => false, 'results' => array() );
+        $s_pattern = '/([a-z ]+)[-: ]*([0-9]+)/i';
+        $s_result = preg_match_all($s_pattern, $scored_tags, $s_matches);
+        //var_dump($s_result);
+        // 0 => full match, 1 => first match (tag) 2 => second match
+        if( $s_result > 0 && is_array($s_matches) && $s_matches > 0 ){
+            $tags = $s_matches[1];
+            $scores = $s_matches[2];
+            if( count($tags) == count($scores)){
+                $result['matched'] = true;
+
+                foreach($tags as $k => $v){
+                    if( $scores[$k] > 0){
+                        $result['results'][$v] = $scores[$k];
+                    } 
+                }
+            }
+        }
+
+        return $result;//json_encode($result,true);
+    } 
+
     public static function SliceLyricSections($lyrics){
 
         //break them by the square bracket seperators
@@ -383,12 +413,18 @@ class Utils {
     } 
 
     // for terminal output
-    public static function CliProgressBar($done, $total, $width=50) {
+    public static function CliProgressBar($done, $total, $width=50, $memuse = false) {
         if( self::IsCli() ){
             $perc = round(($done * 100) / $total);
             $bar = round(($width * $perc) / 100);
             //$disp = number_format($perc*100, 0);
             $info = "  $done/$total";
+            if($memuse){
+                $mb = round( memory_get_usage() /1048576,2);
+                $memory_limit = ini_get('memory_limit'); 
+                $info .= " [$mb/$memory_limit]";
+            }
+            
             echo sprintf("%s%%[%s>%s]%s\r", $perc, str_repeat("=", $bar), str_repeat(" ", $width-$bar), $info);
             flush();
         }

@@ -13,8 +13,14 @@ require("bootstrapper.inc.php");
 $stage = 0;
 $next_stage = $stage + 1;
 
+
+$do_notify = is_writable($update_file);
+
 //include('templates/header.inc.php');
 $logname = $stage . '.llmtopic';
+
+$alert = 0;
+$alert_amount = 500;
 
 $is_test_run = false;
 $continue_running = true;
@@ -98,7 +104,7 @@ while($rows_to_do > 10 && $continue_running){
 
 	//row_id  	lyrics 	lyric_id 	section 	topics 	processed 	
     //$q = "SELECT lyrics, row_id FROM sections_topics WHERE processed = " . $stage . " ORDER BY row_id ASC LIMIT 20"; // 10,000
-    $q = "SELECT lyrics, row_id FROM sections_topics WHERE processed = " . $stage . " ORDER BY RAND() LIMIT 20"; // 10,000
+    $q = "SELECT lyrics, row_id FROM sections_topics WHERE processed = " . $stage . " ORDER BY RAND() LIMIT 100"; // 10,000
 
     $rows = $registry->db->getRows($q);
 
@@ -109,10 +115,13 @@ while($rows_to_do > 10 && $continue_running){
             $reply = $registry->llm->Generate($prompt);
 
             if( !$is_test_run ){
-                $reply = trim($reply);
+                if( !empty($reply) ){
+                    $reply = trim($reply);
+                    $q = "UPDATE sections_topics SET topics = ?, processed = ? WHERE row_id = ?";
+                    $registry->db->sendQueryP($q, array($reply, $next_stage, $row['row_id']), "sii");
+                }
                 //$q_reply = ( strlen($reply) > 254 ) ? substr($reply , 0,254) : $reply;
-                $q = "UPDATE sections_topics SET topics = ?, processed = ? WHERE row_id = ?";
-                $registry->db->sendQueryP($q, array($reply, $next_stage, $row['row_id']), "sii");
+                
             }else{
                 echo '<pre>';
                 var_dump( $reply );
@@ -121,6 +130,7 @@ while($rows_to_do > 10 && $continue_running){
             }
 
             $num_done++;
+            $alert++;
 
             Utils::CliProgressBar($num_done, $total);
             
@@ -148,6 +158,13 @@ while($rows_to_do > 10 && $continue_running){
         $loginfo['lastkey'] = $row['row_id'];
 
         Utils::DbLog($logname, json_encode($loginfo,JSON_FORCE_OBJECT | JSON_PRETTY_PRINT), $registry->db );
+
+        if( $do_notify && $alert > $alert_amount ){
+            $alert = 0;
+            $update_string = "\n <pre> \n ==== " . date(DATE_RFC2822) . "\n". json_encode($loginfo,JSON_FORCE_OBJECT | JSON_PRETTY_PRINT) . " <pre> <hr /> \n";
+            file_put_contents( $update_file, $update_string ); //FILE_APPEND
+
+        }
     }
     
 
