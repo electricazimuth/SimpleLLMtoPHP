@@ -14,6 +14,7 @@ enum PromptFormat
     case LlamaChat;
     case MPT;
     case Mistral;
+    case GemmaIT;
     case None;
 }
 /*
@@ -162,6 +163,13 @@ class KoboldApi {
                 $this->promptPostfix = "\n### Response:\n";
                 $this->payload['stop_sequence'] = array("### Input:", "### Response:");
             break;
+
+            case PromptFormat::GemmaIT:
+                $this->promptPrefix = "<bos><start_of_turn>user\n";
+                $this->promptPostfix = "<end_of_turn>\n<start_of_turn>model\n";
+                $this->payload['stop_sequence'] = array("<end_of_turn>", "<bos>");
+            break;
+
             case PromptFormat::None:
                 $this->promptPrefix = "";
                 $this->promptPostfix = "";

@@ -5,7 +5,7 @@
  * RESET
  * UPDATE sections_topics SET topics = '', processed = 0 WHERE processed != 0
  */
-die('die on line 8 - uncomment to run');
+die('die on line 8 - comment it out to run');
 set_time_limit(0);
 
 $loginfo = array();
@@ -102,7 +102,7 @@ if(!$generate_topics){
 }
 
 //$registry->llm->SetMemory($memory_prompt);
-$registry->llm->SetPromptFormat(PromptFormat::Alpaca);//Alpaca);//VicunaShort ); Mistral //mixtral,llongorca - ChatML, Laser - Ollama , Alpaca -pivot moe LlamaChat Vicuna   MistralStopper MPT
+$registry->llm->SetPromptFormat(PromptFormat::Alpaca);//GemmaIT);//Alpaca);//VicunaShort ); Mistral //mixtral,llongorca - ChatML, Laser - Ollama , Alpaca -pivot moe LlamaChat Vicuna   MistralStopper MPT
 $registry->llm->SetMaxContextLength(1024);
 $registry->llm->SetMaxLength(300);
 

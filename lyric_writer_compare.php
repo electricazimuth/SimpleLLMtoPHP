@@ -12,7 +12,7 @@ $total = 200;
 //1202  2332 1182
 // l.row_id ASC LIMIT 1,1";
 //$q = "SELECT DISTINCT(topics) as gen_topics FROM generation_tests LIMIT " . $total;
-$q = "SELECT * FROM generation_tests ORDER BY topics ASC, model ASC, prompt_type DESC LIMIT " . $total;
+$q = "SELECT * FROM generation_tests WHERE row_id >= 177 ORDER BY topics ASC, model ASC, prompt_type DESC LIMIT " . $total;
 
 // [model] [type] [topic] => lyrics
 
