@@ -14,15 +14,15 @@ $loginfo = array();
 require 'bootstrapper.inc.php';
 
 //require __DIR__ . '/vendor/autoload.php';
-
+die("comment out line 17 to run" );
 
 $stage = 0;
 $next_stage = $stage + 1;
 
 
 $logname = $stage . '.phonegen';
-
-$is_test_run = false;
+$timing_key = 'harmonic';
+$is_test_run = false;//true;
 $continue_running = true;
 $max_phone_count = 40;
 $loginfo = array();
@@ -46,12 +46,31 @@ $notes_file = 'data/blackbird/4-only-waiting-moment.json';
 $notes_str = file_get_contents($notes_file);
 $notes = json_decode($notes_str, true);
 
+
+$ph_timings_file = 'data/larapa_timing.json';
+$ph_timings_str = file_get_contents($ph_timings_file);
+$ph_timings_flat = json_decode($ph_timings_str, true);
+$ph_timings = array();
+foreach($ph_timings_flat as $row){
+    $ph_timings[ $row['phone'] ] = $row;
+}
+
 $note_seq = explode(' ',$notes['note_seq']);
 $note_dur = explode(' ',$notes['note_dur']);
 
 if( count($note_seq) != count($note_dur) ){
     echo 'ERROR note seq (' . count($note_seq) . ') has diff count to not dur (' . count($note_dur) . ') in ' . $notes_file;
     die();
+}
+
+$total_note_duration = array_sum($note_dur);
+
+$notes_data = array();
+$_running_note_dur = 0.0;
+//create an array with key as note position through sequence
+foreach($note_dur as $k => $note_d){
+    $notes_data[ strval($_running_note_dur) ] = $note_seq[$k];
+    $_running_note_dur += $note_d;
 }
 
 $slur_0 = array_fill(0, count($note_seq), 0);
@@ -157,26 +176,104 @@ while($rows_to_do > 5 && !$auto_stop){
                     $ds_data['ph_seq'] = $phone_joined;
                     $ds_data['ph_num'] = implode(' ',$ph_num);
                     $ds_data['ph_dur'] = implode(' ', $ph_dur_0);
-                    //save these into the database
 
-                    $q = "INSERT INTO `generation_lines` (`generation_row_id`, `lyric_line`, `line_number`, `phone_count`, `ds_file_initial`) VALUES (?, ?, ?, ?, ?)";
-                    $registry->db->sendQueryP($q, array((int)$row['row_id'], $lyric_line, $line_number, $phone_count, json_encode($ds_data) ), "isiis");
-                    $line_number++;
+                    $estimated_total_phone_duration = 0.001;
+                    //need to remap notes to match the "words defined by ph_num
+                    foreach($phone_joined_split as $phone){
+                        if( isset( $ph_timings[$phone] ) ){
+
+                            $estimated_total_phone_duration += $ph_timings[$phone][$timing_key];
+                            
+                        }else{
+                            echo 'ERROR: No timing for ' . $phone;
+                            die();
+                        }
+                        
+                    }
+
+                    //fit text to notes
+                    $timing_ratio = $total_note_duration / $estimated_total_phone_duration;
+
+                    //notes are per "word" - phones grouped by $ph_num
+                    $running_duration = 0.0;
+                    $word_note = array();
+                    $word_dur =  array();
+                    foreach( $ph_num as $ph_num_val ){
+                        $running_ph_index = 0;
+                        //loop through the each word to generate note lengths
+                        $_duration = 0.0;
+                        for($i = 0; $i < $ph_num_val; $i++){
+
+                            
+                            $_phone = $phone_joined_split[ $running_ph_index ];
+                            $_duration += $ph_timings[$_phone][$timing_key] * $timing_ratio;
+                            $running_ph_index++;
+                            
+
+                        }
+                        $running_duration += $_duration;
+
+                        $word_note[] = get_note_at( $running_duration, $notes_data );
+                        $word_dur[] = $_duration;
+
+                        
+
+
+                    }
+
+                    $ds_data["note_seq"] = implode(' ',$word_note);
+                    $ds_data["note_dur"] = implode(' ',$word_dur);
+                    $ds_data["note_slur"] = implode(' ', array_fill(0, count($word_note), 0));
+                    
+
+                    if( $is_test_run){
+                        echo '<pre>';
+                        echo json_encode($ds_data,JSON_PRETTY_PRINT) ;//var_export($ds_data, true );
+                        echo '</pre><hr />';
+
+                    }else{
+                        //save these into the database
+
+                        $q = "INSERT INTO `generation_lines` (`generation_row_id`, `lyric_line`, `line_number`, `phone_count`, `ds_file_initial`) VALUES (?, ?, ?, ?, ?)";
+                        $registry->db->sendQueryP($q, array((int)$row['row_id'], $lyric_line, $line_number, $phone_count, json_encode($ds_data) ), "isiis");
+                        $line_number++;
+                    }
+
+
                 }
 
 
             }
 
-
-            $q = "UPDATE generation_tests SET processed = ? WHERE row_id = ?";
-            $registry->db->sendQueryP($q, array($next_stage, $row['row_id']), "ii");
-            
+            if( !$is_test_run){
+                $q = "UPDATE generation_tests SET processed = ? WHERE row_id = ?";
+                $registry->db->sendQueryP($q, array($next_stage, $row['row_id']), "ii");
+            }
         }
 
     }
 
+    if( $is_test_run){
+        $auto_stop = true;
+    }
+
     $test_rows = $registry->db->getRows($test_q);
     $rows_to_do = (int)$test_rows[0]['counter'];
+
+}
+
+
+
+function get_note_at( $_time, $notes_data ){
+    $note_match = $notes_data[0];
+    foreach($notes_data as $note_start => $note){
+        if( $_time < $note_start){
+            return $note_match;
+        }
+        $note_match = $note;
+    }
+
+    return $note_match;
 
 }
 
