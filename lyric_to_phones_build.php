@@ -5,7 +5,14 @@
  * 
  * RESET 
  * UPDATE `generation_tests` SET processed = 0;
+ * 
+ * 
  * TRUNCATE TABLE `generation_lines` 
+ * 
+ * 
+ * 
+ * UPDATE `alpha_generation` SET processed = 0;
+ * TRUNCATE TABLE alpha_lines
  */
 
 set_time_limit(0);
@@ -14,12 +21,16 @@ $loginfo = array();
 require 'bootstrapper.inc.php';
 
 //require __DIR__ . '/vendor/autoload.php';
-die("comment out line 17 to run" );
+//die("comment out line 17 to run" );
 
 $stage = 0;
 $next_stage = $stage + 1;
 
+$track_bpm = 155;
+$quantisation_length = (60.0 / $track_bpm) * 0.25; //quarternote
+$do_quantisation = true;
 
+$table_prefix = 'alpha';
 $logname = $stage . '.phonegen';
 $timing_key = 'harmonic';
 $is_test_run = false;//true;
@@ -28,7 +39,7 @@ $max_phone_count = 40;
 $loginfo = array();
 //clear out any previous entries
 
-$test_q = "SELECT COUNT(*) as counter FROM generation_tests WHERE processed = " . $stage ;
+$test_q = "SELECT COUNT(*) as counter FROM " . $table_prefix . "_generation WHERE processed = " . $stage ;
 $test_rows = $registry->db->getRows($test_q);
 $rows_to_do = (int)$test_rows[0]['counter'];
 $auto_stop = false;
@@ -42,9 +53,13 @@ $limit = ($is_test_run)? 5 : 25;
 $split_phones_str = file_get_contents('data/split_on_cmuphones.txt');
 $split_phones = preg_split('/\s+/', $split_phones_str);
 
-$notes_file = 'data/blackbird/4-only-waiting-moment.json';
-$notes_str = file_get_contents($notes_file);
-$notes = json_decode($notes_str, true);
+$notes_files = array('data/maxtrak1/vm1.json', 'data/maxtrak1/vm2.json', 'data/maxtrak1/vm3.json', 'data/maxtrak1/vm4.json') ;
+$notes = array();
+foreach($notes_files as $notes_file){
+    $notes_str = file_get_contents($notes_file);
+    $notes[] = array('notes' => json_decode($notes_str, true));
+}
+
 
 
 $ph_timings_file = 'data/larapa_timing.json';
@@ -55,26 +70,30 @@ foreach($ph_timings_flat as $row){
     $ph_timings[ $row['phone'] ] = $row;
 }
 
-$note_seq = explode(' ',$notes['note_seq']);
-$note_dur = explode(' ',$notes['note_dur']);
+foreach($notes as $k => $note){
 
-if( count($note_seq) != count($note_dur) ){
-    echo 'ERROR note seq (' . count($note_seq) . ') has diff count to not dur (' . count($note_dur) . ') in ' . $notes_file;
-    die();
+    $notes[$k]['seq'] = explode(' ',$notes[$k]['notes']['note_seq']);
+    $notes[$k]['dur'] = explode(' ',$notes[$k]['notes']['note_dur']);
+
+    if( count($notes[$k]['seq']) != count($notes[$k]['dur']) ){
+        echo 'ERROR note seq (' . count($notes[$k]['seq']) . ') has diff count to not dur (' . count($notes[$k]['dur']) . ') in ' . $notes_file;
+        die();
+    }
+
+    $notes[$k]['total_note_duration'] = array_sum($notes[$k]['dur']);
+
+    $notes[$k]['notes_data'] = array();
+    $_running_note_dur = 0.0;
+    //create an array with key as note position through sequence
+    foreach($notes[$k]['dur'] as $dur_k => $note_d){
+        $notes[$k]['notes_data'][ strval($_running_note_dur) ] = $notes[$k]['seq'][$dur_k];
+        $_running_note_dur += $note_d;
+    }
+
+    $notes[$k]['slur_0'] = array_fill(0, count($notes[$k]['seq']), 0);
+
+
 }
-
-$total_note_duration = array_sum($note_dur);
-
-$notes_data = array();
-$_running_note_dur = 0.0;
-//create an array with key as note position through sequence
-foreach($note_dur as $k => $note_d){
-    $notes_data[ strval($_running_note_dur) ] = $note_seq[$k];
-    $_running_note_dur += $note_d;
-}
-
-$slur_0 = array_fill(0, count($note_seq), 0);
-
 
 $template = array(
     "offset" => 0.0,
@@ -82,18 +101,17 @@ $template = array(
     "ph_seq" => '',
     "ph_num" => '',
     "ph_dur" => '',
-    "note_seq" => $notes['note_seq'],
-    "note_dur" => $notes['note_dur'],
-    "note_slur" => implode(' ', $slur_0)
+    "note_seq" => $notes[0]['notes']['note_seq'],
+    "note_dur" => $notes[0]['notes']['note_dur'],
+    "note_slur" => implode(' ', $notes[0]['slur_0'])
 );
-
 
 
 while($rows_to_do > 5 && !$auto_stop){
 
     Utils::CliProgressBar($num_done, $total);
     $time_start = microtime(true);
-    $q = "SELECT * FROM generation_tests WHERE processed = " . $stage . " ORDER BY row_id ASC LIMIT " . $limit;
+    $q = "SELECT * FROM " . $table_prefix ."_generation WHERE processed = " . $stage . " ORDER BY row_id ASC LIMIT " . $limit;
     $rows = $registry->db->getRows($q);
 
     $num_done += count($rows);
@@ -190,6 +208,9 @@ while($rows_to_do > 5 && !$auto_stop){
                         }
                         
                     }
+                    
+                    $note_data = $notes[ $line_number - 1];
+                    $total_note_duration = $note_data['total_note_duration'];
 
                     //fit text to notes
                     $timing_ratio = $total_note_duration / $estimated_total_phone_duration;
@@ -206,17 +227,19 @@ while($rows_to_do > 5 && !$auto_stop){
 
                             
                             $_phone = $phone_joined_split[ $running_ph_index ];
-                            $_duration += $ph_timings[$_phone][$timing_key] * $timing_ratio;
+                            $_this_phone_timing = $ph_timings[$_phone][$timing_key] * $timing_ratio;
+                            if( $do_quantisation ){
+                                $_this_phone_timing = quantise_timing( $_this_phone_timing , $quantisation_length );
+                            }
+                            $_duration += $_this_phone_timing;
                             $running_ph_index++;
                             
 
                         }
                         $running_duration += $_duration;
 
-                        $word_note[] = get_note_at( $running_duration, $notes_data );
+                        $word_note[] = get_note_at( $running_duration, $note_data['notes_data'] );
                         $word_dur[] = $_duration;
-
-                        
 
 
                     }
@@ -234,8 +257,8 @@ while($rows_to_do > 5 && !$auto_stop){
                     }else{
                         //save these into the database
 
-                        $q = "INSERT INTO `generation_lines` (`generation_row_id`, `lyric_line`, `line_number`, `phone_count`, `ds_file_initial`) VALUES (?, ?, ?, ?, ?)";
-                        $registry->db->sendQueryP($q, array((int)$row['row_id'], $lyric_line, $line_number, $phone_count, json_encode($ds_data) ), "isiis");
+                        $q = "INSERT INTO `" . $table_prefix . "_lines` (`generation_row_id`, `lyric_line`, `line_number`, `phone_count`, `ph_num_count`, `ds_file_initial`) VALUES (?, ?, ?, ?, ?, ?)";
+                        $registry->db->sendQueryP($q, array((int)$row['row_id'], $lyric_line, $line_number, $phone_count, count($ph_num), json_encode($ds_data) ), "isiiis");
                         $line_number++;
                     }
 
@@ -246,7 +269,7 @@ while($rows_to_do > 5 && !$auto_stop){
             }
 
             if( !$is_test_run){
-                $q = "UPDATE generation_tests SET processed = ? WHERE row_id = ?";
+                $q = "UPDATE " . $table_prefix . "_generation SET processed = ? WHERE row_id = ?";
                 $registry->db->sendQueryP($q, array($next_stage, $row['row_id']), "ii");
             }
         }
@@ -262,9 +285,20 @@ while($rows_to_do > 5 && !$auto_stop){
 
 }
 
+function quantise_timing( $timing , $quantisation_length ){
+    ///round the time to the quantisation length
+    // Calculate the number of quantized intervals
+    $quantized_intervals = round($timing / $quantisation_length);
+    // Compute the quantized value
+    $quantized = $quantized_intervals * $quantisation_length;
+        
+    return $quantized;
+}
+
 
 
 function get_note_at( $_time, $notes_data ){
+   
     $note_match = $notes_data[0];
     foreach($notes_data as $note_start => $note){
         if( $_time < $note_start){

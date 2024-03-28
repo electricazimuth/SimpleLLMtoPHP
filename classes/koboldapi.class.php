@@ -53,8 +53,8 @@ class KoboldApi {
         'top_p' =>  0.92,
         'typical' =>  1
     );
-    private $promptPrefix = "";
-    private $promptPostfix = "";
+    public $promptPrefix = "";
+    public $promptPostfix = "";
 /*
     max_context_length	[...]
     max_length	[...]
@@ -99,6 +99,10 @@ class KoboldApi {
 */
     public function SetPrompt($prompt){
         $this->payload['prompt'] = $this->ApplyFormat( $prompt );
+    }
+
+    public function SetPromptRaw($prompt){
+        $this->payload['prompt'] = $prompt;
     }
 
     public function SetMaxLength($length){
@@ -200,6 +204,12 @@ class KoboldApi {
             $this->payload['temperature'] = floatval($temperature);
         }
     }
+
+    public function GetTemperature(){
+        return $this->payload['temperature'];
+    }
+
+
 
     private function PayloadJson(){
         return json_encode($this->payload) ;
